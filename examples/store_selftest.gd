@@ -1,6 +1,6 @@
 extends Node
 
-## dot-store's headless suite (res://examples/store_selftest.tscn).
+## gs-store's headless suite (res://examples/store_selftest.tscn).
 ## Counts sections run to their last line as well as checks, because a script error aborts a section and not the run.
 
 const EXPECTED_SECTIONS := 5
@@ -12,7 +12,7 @@ var _sections := 0
 
 
 func _ready() -> void:
-	print("dot-store")
+	print("gs-store")
 	_config()
 	_catalogue()
 	_entitlements()
@@ -47,7 +47,7 @@ func _config() -> void:
 	c.intent_ttl_seconds = 60
 	var applied := c.apply_dictionary({"currency": "gems", "max_cart_lines": 4})
 	_check(applied.size() == 2 and c.currency == "gems" and c.max_cart_lines == 4, "a dictionary layer sets every type", str(applied))
-	_check(c.env_prefix() == "DOT_STORE_" and c.cli_prefix() == "--store-", "env and command-line prefixes")
+	_check(c.env_prefix() == "GS_STORE_" and c.cli_prefix() == "--store-", "env and command-line prefixes")
 	var r := GSStoreConfig.from_files()
 	_check(r.ok and r.value is GSStoreConfig, "from_files returns a config")
 	_sections += 1

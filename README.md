@@ -6,13 +6,13 @@ A catalogue is plain data. A player's entitlements are one small Dictionary (`ow
 
 ## Install
 
-1. Copy `addons/dot_store/` and `addons/dot_core/` into your project.
-2. Enable dot-store in *Project > Project Settings > Plugins*.
+1. Copy `addons/gs_store/` and `addons/gs_core/` into your project.
+2. Enable gs-store in *Project > Project Settings > Plugins*.
 
 ## Quick start
 
 ```gdscript
-var cfg := GSStoreConfig.from_files().value      # defaults, cfg/addon/dot_store/*.yml, DOT_STORE_*, --store-*
+var cfg := GSStoreConfig.from_files().value      # defaults, cfg/addon/gs_store/*.yml, GS_STORE_*, --store-*
 var cat := GSStoreCatalogue.from_dict({"items": [
     {"id": "skin_a", "kind": "cosmetic", "price": 300},
     {"id": "spray_b", "kind": "cosmetic", "price": 100},

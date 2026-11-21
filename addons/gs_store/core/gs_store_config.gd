@@ -1,9 +1,9 @@
 class_name GSStoreConfig
 extends GSConfig
 
-## Every tunable of the store. `cfg/addon/dot_store/*.yml`, `DOT_STORE_*` and `--store-*` layer over these defaults. A zero in a limit means unlimited.
+## Every tunable of the store. `cfg/addon/gs_store/*.yml`, `GS_STORE_*` and `--store-*` layer over these defaults. A zero in a limit means unlimited.
 
-const ADDON := "dot-store"
+const ADDON := "gs-store"
 
 ## Master switch: off, no purchase intent is built.
 @export var enabled: bool = true
@@ -18,7 +18,7 @@ const ADDON := "dot-store"
 
 
 func env_prefix() -> String:
-	return "DOT_STORE_"
+	return "GS_STORE_"
 
 
 func cli_prefix() -> String:
@@ -33,7 +33,7 @@ func validate() -> GSResult:
 	return GSResult.success(self)
 
 
-## Defaults, then `cfg/addon/dot_store/*.yml`, then environment and command line.
+## Defaults, then `cfg/addon/gs_store/*.yml`, then environment and command line.
 static func from_files() -> GSResult:
 	var cfg := GSStoreConfig.new()
 	var files := GSAddonConfig.load_dir(ADDON)

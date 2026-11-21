@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="dot-store"
+config/name="gs-store"
 config/description="Godot 4.7+ addon for a catalogue and checkout of cosmetics, passes and bundles: prices, entitlements a dedicated server can check, and purchase intents handed to the TMC backbone. It never handles payment details. Part of the GameSpice addon family."
 run/main_scene="res://examples/store_selftest.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -19,7 +19,7 @@ config/icon="res://icon.svg"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dot_store/plugin.cfg")
+enabled=PackedStringArray("res://addons/gs_store/plugin.cfg")
 
 [importer_defaults]
 
