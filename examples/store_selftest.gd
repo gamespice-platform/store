@@ -3,8 +3,8 @@ extends Node
 ## dot-store's headless suite (res://examples/store_selftest.tscn).
 ## Counts sections run to their last line as well as checks, because a script error aborts a section and not the run.
 
-const EXPECTED_SECTIONS := 4
-const EXPECTED_CHECKS := 57
+const EXPECTED_SECTIONS := 5
+const EXPECTED_CHECKS := 70
 
 var _passed := 0
 var _failed := 0
@@ -17,6 +17,7 @@ func _ready() -> void:
 	_catalogue()
 	_entitlements()
 	_intent()
+	_timing()
 	print("")
 	_check(_sections == EXPECTED_SECTIONS, "every section ran to its last line (%d of %d)" % [_sections, EXPECTED_SECTIONS])
 	_check(_passed + _failed == EXPECTED_CHECKS, "and the suite ran all %d of its checks (%d)" % [EXPECTED_CHECKS, _passed + _failed])
@@ -142,6 +143,39 @@ func _intent() -> void:
 	var tainted := it.duplicate(true)
 	tainted["iban"] = "DE00"
 	_check(DotStoreIntent.verify(cat, tainted, 200).error.code == DotError.CODE_FORBIDDEN, "verify refuses an intent carrying payment detail")
+	_sections += 1
+
+
+func _timing() -> void:
+	var d := _cat_dict()
+	d["items"].append({"id": "boost", "kind": "pass", "price": 200, "duration": 100, "sale": {"price": 50, "from": 1000, "until": 2000}})
+	d["items"].append({"id": "elite", "kind": "cosmetic", "price": 500, "requires": ["skin_a"]})
+	var cat: DotStoreCatalogue = DotStoreCatalogue.from_dict(d).value
+	_check(cat.price_at("boost", 999) == 200 and cat.price_at("boost", 1000) == 50 and cat.price_at("boost", 2000) == 200 and cat.price_at("ghost", 1) == -1, "the sale price holds inside its window only")
+	_check(cat.duration_of("boost") == 100 and cat.duration_of("skin_a") == 0 and cat.requires_of("elite") == ["skin_a"], "duration and requires read back")
+	var bad := _cat_dict()
+	bad["items"].append({"id": "x", "kind": "cosmetic", "price": 1, "requires": ["nope"]})
+	_check(not DotStoreCatalogue.from_dict(bad).ok, "a requirement outside the catalogue is refused")
+	var cfg := DotStoreConfig.new()
+	var ent := DotStoreEntitlements.create()
+	var sale := DotStoreIntent.build(cfg, cat, ent, "p1", ["boost"], 1500)
+	_check(sale.ok and sale.value["total"] == 50 and DotStoreIntent.verify(cat, sale.value, 1600).ok, "an intent uses the sale price and verifies")
+	var locked := DotStoreIntent.build(cfg, cat, ent, "p1", ["elite"], 1500)
+	_check(not locked.ok and locked.error.code == DotError.CODE_FORBIDDEN, "a missing prerequisite is FORBIDDEN")
+	var have: Dictionary = DotStoreEntitlements.grant(ent, cat, "skin_a").value["entitlements"]
+	_check(DotStoreIntent.build(cfg, cat, have, "p1", ["elite"], 1500).ok, "the prerequisite lets the purchase through")
+	var timed: Dictionary = DotStoreEntitlements.grant(ent, cat, "boost", 1500).value["entitlements"]
+	_check(DotStoreEntitlements.owns_at(timed, "boost", 1599) and not DotStoreEntitlements.owns_at(timed, "boost", 1600), "a timed item runs out at its expiry")
+	_check(DotStoreEntitlements.expiring(timed, 1500, 50).is_empty() and DotStoreEntitlements.expiring(timed, 1560, 50) == ["boost"], "expiring lists what runs out soon")
+	var renewed: Dictionary = DotStoreEntitlements.grant(timed, cat, "boost", 1550).value["entitlements"]
+	_check(renewed["expires"]["boost"] == 1700, "buying again extends the time")
+	var pr := DotStoreEntitlements.prune(timed, 1600)
+	_check(not DotStoreEntitlements.owns(pr, "boost") and DotStoreEntitlements.owns(timed, "boost"), "prune drops expired items and leaves the input alone")
+	var forever: Dictionary = DotStoreEntitlements.grant(ent, cat, "boost").value["entitlements"]
+	_check(DotStoreEntitlements.owns_at(forever, "boost", 99999999), "without a clock a timed item is granted for good")
+	var rv := DotStoreEntitlements.revoke(timed, cat, "boost")
+	_check(rv.ok and rv.value["removed"] == ["boost"] and not DotStoreEntitlements.owns(rv.value["entitlements"], "boost") and not rv.value["entitlements"]["expires"].has("boost"), "revoke takes an item and its clock back")
+	_check(not DotStoreEntitlements.revoke(timed, cat, "ghost").ok, "revoking an unknown item is refused")
 	_sections += 1
 
 

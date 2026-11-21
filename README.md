@@ -33,6 +33,10 @@ if DotStoreEntitlements.check(ent, ["skin_a"]).ok:
     pass
 ```
 
+## Sales, timed items and refunds
+
+An item may carry `sale: {price, from?, until?}`, `duration` (seconds the entitlement lasts; 0 is for good) and `requires: [ids]` that must already be owned. `price_at(id, now)` gives the price a cart pays; `DotStoreIntent.verify` checks a line against the price at the intent's creation time. `DotStoreEntitlements.grant(ent, cat, id, now)` starts the clock of a timed item (buying again extends it); `owns_at`, `prune` and `expiring` read it; `revoke` takes an item back for a refund. Pass `now` as 0 to grant timed items for good. See `examples/store_demo.gd`.
+
 ## Settings
 
 Every number is a field on `DotStoreConfig`. A zero in a limit means unlimited.

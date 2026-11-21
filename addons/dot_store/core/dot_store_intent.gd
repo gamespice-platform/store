@@ -58,7 +58,10 @@ static func build(cfg: DotStoreConfig, cat: DotStoreCatalogue, ent: Dictionary, 
 			return DotResult.fail(DotError.CODE_STATE, "item %s is not on sale now" % id)
 		if cfg.refuse_owned and DotStoreEntitlements.missing(ent, cat.expand(id)).is_empty():
 			return DotResult.fail(DotError.CODE_CONFLICT, "player already owns %s" % id)
-		var price := cat.price_of(id)
+		var unmet := DotStoreEntitlements.missing(ent, cat.requires_of(id))
+		if not unmet.is_empty():
+			return DotResult.fail(DotError.CODE_FORBIDDEN, "item %s needs %s first" % [id, ", ".join(unmet)])
+		var price := cat.price_at(id, now)
 		lines.append({"id": id, "price": price})
 		total += price
 	lines.sort_custom(func(a, b): return a["id"] < b["id"])
@@ -86,9 +89,10 @@ static func verify(cat: DotStoreCatalogue, intent: Dictionary, now: int) -> DotR
 	var total := 0
 	for l in intent.get("lines", []):
 		var id := str(l.get("id", ""))
-		if not cat.has(id) or int(l.get("price", -1)) != cat.price_of(id):
+		var due := cat.price_at(id, int(intent.get("created", now)))
+		if not cat.has(id) or int(l.get("price", -1)) != due:
 			return DotResult.fail(DotError.CODE_INTEGRITY, "intent line %s does not match the catalogue" % id)
-		total += cat.price_of(id)
+		total += due
 	if total != int(intent.get("total", -1)):
 		return DotResult.fail(DotError.CODE_INTEGRITY, "intent total %s is not %d" % [str(intent.get("total")), total])
 	return DotResult.success(intent)
