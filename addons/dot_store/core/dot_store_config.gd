@@ -1,5 +1,5 @@
-class_name DotStoreConfig
-extends DotConfig
+class_name GSStoreConfig
+extends GSConfig
 
 ## Every tunable of the store. `cfg/addon/dot_store/*.yml`, `DOT_STORE_*` and `--store-*` layer over these defaults. A zero in a limit means unlimited.
 
@@ -25,18 +25,18 @@ func cli_prefix() -> String:
 	return "--store-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if currency.strip_edges() == "":
-		return DotResult.fail(DotError.CODE_INVALID, "store currency is empty")
+		return GSResult.fail(GSError.CODE_INVALID, "store currency is empty")
 	if max_cart_lines < 0 or intent_ttl_seconds < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "store limits cannot be negative (0 is unlimited)")
-	return DotResult.success(self)
+		return GSResult.fail(GSError.CODE_INVALID, "store limits cannot be negative (0 is unlimited)")
+	return GSResult.success(self)
 
 
 ## Defaults, then `cfg/addon/dot_store/*.yml`, then environment and command line.
-static func from_files() -> DotResult:
-	var cfg := DotStoreConfig.new()
-	var files := DotAddonConfig.load_dir(ADDON)
+static func from_files() -> GSResult:
+	var cfg := GSStoreConfig.new()
+	var files := GSAddonConfig.load_dir(ADDON)
 	if not files.ok:
 		return files
 	cfg.apply_dictionary(files.value as Dictionary, "yml")

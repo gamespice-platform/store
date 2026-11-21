@@ -1,4 +1,4 @@
-class_name DotStoreIntent
+class_name GSStoreIntent
 extends RefCounted
 
 ## A purchase intent: what a player wants to buy, priced from the catalogue, handed to the backbone to settle. It never carries payment details; any request that does is refused.
@@ -8,11 +8,11 @@ const PAYMENT_KEYS := ["card", "card_number", "cardnumber", "pan", "cvv", "cvc",
 
 
 ## Fails FORBIDDEN when [param d] holds a payment-detail key anywhere.
-static func check_request(d) -> DotResult:
+static func check_request(d) -> GSResult:
 	var bad := _find_payment_key(d)
 	if bad != "":
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "request carries payment detail '%s'; the store only takes purchase intents" % bad)
-	return DotResult.success(true)
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "request carries payment detail '%s'; the store only takes purchase intents" % bad)
+	return GSResult.success(true)
 
 
 static func _find_payment_key(v) -> String:
@@ -32,35 +32,35 @@ static func _find_payment_key(v) -> String:
 
 
 ## Build an intent for [param item_ids] (one line each). The value is {id, player, currency, lines, total, created, expires}.
-static func build(cfg: DotStoreConfig, cat: DotStoreCatalogue, ent: Dictionary, player_id: String, item_ids: Array, now: int) -> DotResult:
+static func build(cfg: GSStoreConfig, cat: GSStoreCatalogue, ent: Dictionary, player_id: String, item_ids: Array, now: int) -> GSResult:
 	if not cfg.enabled:
-		return DotResult.fail(DotError.CODE_STATE, "store is disabled")
+		return GSResult.fail(GSError.CODE_STATE, "store is disabled")
 	var clean := check_request({"player": player_id, "items": item_ids})
 	if not clean.ok:
 		return clean
 	if player_id == "":
-		return DotResult.fail(DotError.CODE_INVALID, "intent needs a player id")
+		return GSResult.fail(GSError.CODE_INVALID, "intent needs a player id")
 	if item_ids.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "cart is empty")
+		return GSResult.fail(GSError.CODE_INVALID, "cart is empty")
 	if cfg.max_cart_lines > 0 and item_ids.size() > cfg.max_cart_lines:
-		return DotResult.fail(DotError.CODE_QUOTA, "cart has %d lines, over max_cart_lines %d" % [item_ids.size(), cfg.max_cart_lines])
+		return GSResult.fail(GSError.CODE_QUOTA, "cart has %d lines, over max_cart_lines %d" % [item_ids.size(), cfg.max_cart_lines])
 	var lines: Array = []
 	var seen := {}
 	var total := 0
 	for raw in item_ids:
 		var id := str(raw)
 		if seen.has(id):
-			return DotResult.fail(DotError.CODE_CONFLICT, "item %s is in the cart twice" % id)
+			return GSResult.fail(GSError.CODE_CONFLICT, "item %s is in the cart twice" % id)
 		seen[id] = true
 		if not cat.has(id):
-			return DotResult.fail(DotError.CODE_INVALID, "unknown item %s" % id)
+			return GSResult.fail(GSError.CODE_INVALID, "unknown item %s" % id)
 		if not cat.available(id, now):
-			return DotResult.fail(DotError.CODE_STATE, "item %s is not on sale now" % id)
-		if cfg.refuse_owned and DotStoreEntitlements.missing(ent, cat.expand(id)).is_empty():
-			return DotResult.fail(DotError.CODE_CONFLICT, "player already owns %s" % id)
-		var unmet := DotStoreEntitlements.missing(ent, cat.requires_of(id))
+			return GSResult.fail(GSError.CODE_STATE, "item %s is not on sale now" % id)
+		if cfg.refuse_owned and GSStoreEntitlements.missing(ent, cat.expand(id)).is_empty():
+			return GSResult.fail(GSError.CODE_CONFLICT, "player already owns %s" % id)
+		var unmet := GSStoreEntitlements.missing(ent, cat.requires_of(id))
 		if not unmet.is_empty():
-			return DotResult.fail(DotError.CODE_FORBIDDEN, "item %s needs %s first" % [id, ", ".join(unmet)])
+			return GSResult.fail(GSError.CODE_FORBIDDEN, "item %s needs %s first" % [id, ", ".join(unmet)])
 		var price := cat.price_at(id, now)
 		lines.append({"id": id, "price": price})
 		total += price
@@ -69,10 +69,10 @@ static func build(cfg: DotStoreConfig, cat: DotStoreCatalogue, ent: Dictionary, 
 	for l in lines:
 		parts.append(l["id"])
 	var intent := {
-		"id": DotHash.sha256_text("%s|%s|%d" % [player_id, ",".join(parts), now]),
+		"id": GSHash.sha256_text("%s|%s|%d" % [player_id, ",".join(parts), now]),
 		"player": player_id, "currency": cfg.currency, "lines": lines, "total": total,
 		"created": now, "expires": now + cfg.intent_ttl_seconds if cfg.intent_ttl_seconds > 0 else 0}
-	return DotResult.success(intent)
+	return GSResult.success(intent)
 
 
 static func is_expired(intent: Dictionary, now: int) -> bool:
@@ -80,19 +80,19 @@ static func is_expired(intent: Dictionary, now: int) -> bool:
 
 
 ## The backbone side: re-price an intent against the catalogue and reject a tampered or expired one.
-static func verify(cat: DotStoreCatalogue, intent: Dictionary, now: int) -> DotResult:
+static func verify(cat: GSStoreCatalogue, intent: Dictionary, now: int) -> GSResult:
 	var clean := check_request(intent)
 	if not clean.ok:
 		return clean
 	if is_expired(intent, now):
-		return DotResult.fail(DotError.CODE_STATE, "intent expired")
+		return GSResult.fail(GSError.CODE_STATE, "intent expired")
 	var total := 0
 	for l in intent.get("lines", []):
 		var id := str(l.get("id", ""))
 		var due := cat.price_at(id, int(intent.get("created", now)))
 		if not cat.has(id) or int(l.get("price", -1)) != due:
-			return DotResult.fail(DotError.CODE_INTEGRITY, "intent line %s does not match the catalogue" % id)
+			return GSResult.fail(GSError.CODE_INTEGRITY, "intent line %s does not match the catalogue" % id)
 		total += due
 	if total != int(intent.get("total", -1)):
-		return DotResult.fail(DotError.CODE_INTEGRITY, "intent total %s is not %d" % [str(intent.get("total")), total])
-	return DotResult.success(intent)
+		return GSResult.fail(GSError.CODE_INTEGRITY, "intent total %s is not %d" % [str(intent.get("total")), total])
+	return GSResult.success(intent)

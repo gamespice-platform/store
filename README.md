@@ -12,34 +12,34 @@ A catalogue is plain data. A player's entitlements are one small Dictionary (`ow
 ## Quick start
 
 ```gdscript
-var cfg := DotStoreConfig.from_files().value      # defaults, cfg/addon/dot_store/*.yml, DOT_STORE_*, --store-*
-var cat := DotStoreCatalogue.from_dict({"items": [
+var cfg := GSStoreConfig.from_files().value      # defaults, cfg/addon/dot_store/*.yml, DOT_STORE_*, --store-*
+var cat := GSStoreCatalogue.from_dict({"items": [
     {"id": "skin_a", "kind": "cosmetic", "price": 300},
     {"id": "spray_b", "kind": "cosmetic", "price": 100},
     {"id": "starter", "kind": "bundle", "price": 350, "contents": ["skin_a", "spray_b"]}]}).value
 
-var ent := DotStoreEntitlements.create()          # {owned: []}
+var ent := GSStoreEntitlements.create()          # {owned: []}
 var now := int(Time.get_unix_time_from_system())
-var intent := DotStoreIntent.build(cfg, cat, ent, player_id, ["starter"], now)
+var intent := GSStoreIntent.build(cfg, cat, ent, player_id, ["starter"], now)
 if intent.ok:
     pass  # hand intent.value to the backbone; it settles payment on its own side
 
 # the backbone re-prices it, then the game grants what was bought
-if DotStoreIntent.verify(cat, intent.value, now).ok:
-    ent = DotStoreEntitlements.fulfil(ent, cat, intent.value).value["entitlements"]
+if GSStoreIntent.verify(cat, intent.value, now).ok:
+    ent = GSStoreEntitlements.fulfil(ent, cat, intent.value).value["entitlements"]
 
 # a dedicated server gating a cosmetic
-if DotStoreEntitlements.check(ent, ["skin_a"]).ok:
+if GSStoreEntitlements.check(ent, ["skin_a"]).ok:
     pass
 ```
 
 ## Sales, timed items and refunds
 
-An item may carry `sale: {price, from?, until?}`, `duration` (seconds the entitlement lasts; 0 is for good) and `requires: [ids]` that must already be owned. `price_at(id, now)` gives the price a cart pays; `DotStoreIntent.verify` checks a line against the price at the intent's creation time. `DotStoreEntitlements.grant(ent, cat, id, now)` starts the clock of a timed item (buying again extends it); `owns_at`, `prune` and `expiring` read it; `revoke` takes an item back for a refund. Pass `now` as 0 to grant timed items for good. See `examples/store_demo.gd`.
+An item may carry `sale: {price, from?, until?}`, `duration` (seconds the entitlement lasts; 0 is for good) and `requires: [ids]` that must already be owned. `price_at(id, now)` gives the price a cart pays; `GSStoreIntent.verify` checks a line against the price at the intent's creation time. `GSStoreEntitlements.grant(ent, cat, id, now)` starts the clock of a timed item (buying again extends it); `owns_at`, `prune` and `expiring` read it; `revoke` takes an item back for a refund. Pass `now` as 0 to grant timed items for good. See `examples/store_demo.gd`.
 
 ## Settings
 
-Every number is a field on `DotStoreConfig`. A zero in a limit means unlimited.
+Every number is a field on `GSStoreConfig`. A zero in a limit means unlimited.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Every number is a field on `DotStoreConfig`. A zero in a limit means unlimited.
 
 ## What it is not
 
-- Not a payment processor: no card, bank or billing detail is accepted, stored or logged. `DotStoreIntent.check_request` refuses any request carrying such a key.
+- Not a payment processor: no card, bank or billing detail is accepted, stored or logged. `GSStoreIntent.check_request` refuses any request carrying such a key.
 - Not round-based money: GameSpice Economy runs buy rounds inside a match. Store sells things between matches.
 - Not inventory or loadouts: those consume entitlements. Store only says what a player owns.
 - Not progression: GameSpice Progression names battle-pass rewards, the Store sells the pass.

@@ -1,4 +1,4 @@
-class_name DotStoreEntitlements
+class_name GSStoreEntitlements
 extends RefCounted
 
 ## What a player owns, as a small Dictionary {owned: [ids], expires: {id: unix seconds}} a server can check; `expires` only lists timed items. Pure functions; the caller owns where it lives.
@@ -8,13 +8,13 @@ static func create() -> Dictionary:
 	return {"owned": [], "expires": {}}
 
 
-static func validate(ent: Dictionary) -> DotResult:
+static func validate(ent: Dictionary) -> GSResult:
 	if not (ent.get("owned") is Array):
-		return DotResult.fail(DotError.CODE_INVALID, "entitlements owned must be a list")
+		return GSResult.fail(GSError.CODE_INVALID, "entitlements owned must be a list")
 	for x in ent["owned"]:
 		if not (x is String):
-			return DotResult.fail(DotError.CODE_INVALID, "entitlements owned entries must be strings")
-	return DotResult.success(ent)
+			return GSResult.fail(GSError.CODE_INVALID, "entitlements owned entries must be strings")
+	return GSResult.success(ent)
 
 
 static func owns(ent: Dictionary, id: String) -> bool:
@@ -53,9 +53,9 @@ static func expiring(ent: Dictionary, now: int, within: int) -> Array:
 
 
 ## Takes an item back (a refund): its expanded contents leave the owned list. The value is {entitlements, removed}; the input is not modified.
-static func revoke(ent: Dictionary, cat: DotStoreCatalogue, id: String) -> DotResult:
+static func revoke(ent: Dictionary, cat: GSStoreCatalogue, id: String) -> GSResult:
 	if not cat.has(id):
-		return DotResult.fail(DotError.CODE_INVALID, "unknown item %s" % id)
+		return GSResult.fail(GSError.CODE_INVALID, "unknown item %s" % id)
 	var ok := validate(ent)
 	if not ok.ok:
 		return ok
@@ -68,7 +68,7 @@ static func revoke(ent: Dictionary, cat: DotStoreCatalogue, id: String) -> DotRe
 			exp.erase(x)
 			removed.append(x)
 	next["expires"] = exp
-	return DotResult.success({"entitlements": next, "removed": removed})
+	return GSResult.success({"entitlements": next, "removed": removed})
 
 
 ## Ids from [param ids] the player does not own yet.
@@ -81,17 +81,17 @@ static func missing(ent: Dictionary, ids: Array) -> Array:
 
 
 ## The server-side gate: ok when the player owns every id, otherwise FORBIDDEN naming what is missing.
-static func check(ent: Dictionary, ids: Array) -> DotResult:
+static func check(ent: Dictionary, ids: Array) -> GSResult:
 	var m := missing(ent, ids)
 	if m.is_empty():
-		return DotResult.success(true)
-	return DotResult.fail(DotError.CODE_FORBIDDEN, "not owned: %s" % ", ".join(m))
+		return GSResult.success(true)
+	return GSResult.fail(GSError.CODE_FORBIDDEN, "not owned: %s" % ", ".join(m))
 
 
 ## Grant one catalogue item (a bundle grants its contents). The value is {entitlements, added}; the input is not modified.
-static func grant(ent: Dictionary, cat: DotStoreCatalogue, id: String, now: int = 0) -> DotResult:
+static func grant(ent: Dictionary, cat: GSStoreCatalogue, id: String, now: int = 0) -> GSResult:
 	if not cat.has(id):
-		return DotResult.fail(DotError.CODE_INVALID, "unknown item %s" % id)
+		return GSResult.fail(GSError.CODE_INVALID, "unknown item %s" % id)
 	var ok := validate(ent)
 	if not ok.ok:
 		return ok
@@ -109,12 +109,12 @@ static func grant(ent: Dictionary, cat: DotStoreCatalogue, id: String, now: int 
 			exp[x] = maxi(int(exp[x]), now) + span
 	next["expires"] = exp
 	next["owned"].sort()
-	return DotResult.success({"entitlements": next, "added": added})
+	return GSResult.success({"entitlements": next, "added": added})
 
 
 ## Apply a settled purchase intent: grant every line. Fails whole if any line is unknown.
 ## [param now] (unix seconds) starts the clock of timed items; 0 grants them for good.
-static func fulfil(ent: Dictionary, cat: DotStoreCatalogue, intent: Dictionary, now: int = 0) -> DotResult:
+static func fulfil(ent: Dictionary, cat: GSStoreCatalogue, intent: Dictionary, now: int = 0) -> GSResult:
 	var cur := ent
 	var added: Array = []
 	for line in intent.get("lines", []):
@@ -123,4 +123,4 @@ static func fulfil(ent: Dictionary, cat: DotStoreCatalogue, intent: Dictionary, 
 			return g
 		cur = g.value["entitlements"]
 		added.append_array(g.value["added"])
-	return DotResult.success({"entitlements": cur, "added": added})
+	return GSResult.success({"entitlements": cur, "added": added})

@@ -4,10 +4,10 @@ Catalogue, entitlements and purchase intents for cosmetics, passes and bundles. 
 
 | Path | What |
 | --- | --- |
-| `core/dot_store_config.gd` | `DotStoreConfig`: every tunable, `from_files()` |
-| `core/dot_store_catalogue.gd` | `DotStoreCatalogue`: items, prices, sale windows (`price_at`), `requires`, `duration`, bundle expansion, validation |
-| `core/dot_store_entitlements.gd` | `DotStoreEntitlements`: `{owned, expires}`, grant, revoke, prune, `owns_at`, check, fulfil |
-| `core/dot_store_intent.gd` | `DotStoreIntent`: build (sale price, prerequisites), verify, expiry, payment-key refusal |
+| `core/dot_store_config.gd` | `GSStoreConfig`: every tunable, `from_files()` |
+| `core/dot_store_catalogue.gd` | `GSStoreCatalogue`: items, prices, sale windows (`price_at`), `requires`, `duration`, bundle expansion, validation |
+| `core/dot_store_entitlements.gd` | `GSStoreEntitlements`: `{owned, expires}`, grant, revoke, prune, `owns_at`, check, fulfil |
+| `core/dot_store_intent.gd` | `GSStoreIntent`: build (sale price, prerequisites), verify, expiry, payment-key refusal |
 | `examples/store_selftest.tscn` | the suite |
 
 - **Never touch payment details.** Intents only. `PAYMENT_KEYS` is a denylist checked recursively on every request and on verify; extend it, never loosen it. Do not add a field that could hold a card, bank or billing value.

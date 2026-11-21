@@ -1,4 +1,4 @@
-class_name DotStoreCatalogue
+class_name GSStoreCatalogue
 extends RefCounted
 
 ## What is for sale: cosmetics, passes and bundles with a price and an optional availability window. Pure data, validated on load.
@@ -9,39 +9,39 @@ var _items: Dictionary = {}
 
 
 ## Build from {"items": [{id, kind, price, contents?, from?, until?, duration?, requires?, sale?: {price, from?, until?}}]}. Times are unix seconds; 0 or absent is open-ended.
-static func from_dict(d: Dictionary) -> DotResult:
-	var cat := DotStoreCatalogue.new()
+static func from_dict(d: Dictionary) -> GSResult:
+	var cat := GSStoreCatalogue.new()
 	var raw = d.get("items")
 	if not (raw is Array):
-		return DotResult.fail(DotError.CODE_PARSE, "catalogue needs an items list")
+		return GSResult.fail(GSError.CODE_PARSE, "catalogue needs an items list")
 	for it in raw:
 		if not (it is Dictionary):
-			return DotResult.fail(DotError.CODE_PARSE, "catalogue item is not an object")
+			return GSResult.fail(GSError.CODE_PARSE, "catalogue item is not an object")
 		var id := str(it.get("id", ""))
 		if id == "":
-			return DotResult.fail(DotError.CODE_INVALID, "catalogue item has no id")
+			return GSResult.fail(GSError.CODE_INVALID, "catalogue item has no id")
 		if cat._items.has(id):
-			return DotResult.fail(DotError.CODE_CONFLICT, "catalogue id %s is listed twice" % id)
+			return GSResult.fail(GSError.CODE_CONFLICT, "catalogue id %s is listed twice" % id)
 		var kind := str(it.get("kind", ""))
 		if not KINDS.has(kind):
-			return DotResult.fail(DotError.CODE_INVALID, "item %s has unknown kind %s" % [id, kind])
+			return GSResult.fail(GSError.CODE_INVALID, "item %s has unknown kind %s" % [id, kind])
 		var price = it.get("price")
 		if not (price is int or (price is float and price == floorf(price))) or int(price) < 0:
-			return DotResult.fail(DotError.CODE_INVALID, "item %s price must be a whole number of at least 0" % id)
+			return GSResult.fail(GSError.CODE_INVALID, "item %s price must be a whole number of at least 0" % id)
 		var contents: Array = []
 		if kind == "bundle":
 			var c = it.get("contents")
 			if not (c is Array) or c.is_empty():
-				return DotResult.fail(DotError.CODE_INVALID, "bundle %s needs contents" % id)
+				return GSResult.fail(GSError.CODE_INVALID, "bundle %s needs contents" % id)
 			for x in c:
 				contents.append(str(x))
 		var duration = it.get("duration", 0)
 		if not (duration is int or duration is float) or float(duration) < 0.0:
-			return DotResult.fail(DotError.CODE_INVALID, "item %s duration must be seconds, 0 or more" % id)
+			return GSResult.fail(GSError.CODE_INVALID, "item %s duration must be seconds, 0 or more" % id)
 		var requires: Array = []
 		var rq = it.get("requires", [])
 		if not (rq is Array):
-			return DotResult.fail(DotError.CODE_INVALID, "item %s requires must be a list" % id)
+			return GSResult.fail(GSError.CODE_INVALID, "item %s requires must be a list" % id)
 		for x in rq:
 			requires.append(str(x))
 		var sale: Dictionary = {}
@@ -49,21 +49,21 @@ static func from_dict(d: Dictionary) -> DotResult:
 			var sd = it["sale"]
 			var sp = sd.get("price") if sd is Dictionary else null
 			if not (sp is int or (sp is float and sp == floorf(sp))) or int(sp) < 0:
-				return DotResult.fail(DotError.CODE_INVALID, "item %s sale needs a whole price of at least 0" % id)
+				return GSResult.fail(GSError.CODE_INVALID, "item %s sale needs a whole price of at least 0" % id)
 			sale = {"price": int(sp), "from": int(sd.get("from", 0)), "until": int(sd.get("until", 0))}
 		cat._items[id] = {"id": id, "kind": kind, "price": int(price), "contents": contents, "from": int(it.get("from", 0)), "until": int(it.get("until", 0)),
 			"duration": int(duration), "requires": requires, "sale": sale}
 	for id in cat._items:
 		for x in cat._items[id]["requires"]:
 			if not cat._items.has(x) or x == id:
-				return DotResult.fail(DotError.CODE_INVALID, "item %s requires %s, which is not another item in the catalogue" % [id, x])
+				return GSResult.fail(GSError.CODE_INVALID, "item %s requires %s, which is not another item in the catalogue" % [id, x])
 		for x in cat._items[id]["contents"]:
 			if not cat._items.has(x):
-				return DotResult.fail(DotError.CODE_INVALID, "bundle %s contains unknown item %s" % [id, x])
+				return GSResult.fail(GSError.CODE_INVALID, "bundle %s contains unknown item %s" % [id, x])
 		var seen := {}
 		if cat._cycle(id, seen):
-			return DotResult.fail(DotError.CODE_INVALID, "bundle %s contains itself" % id)
-	return DotResult.success(cat)
+			return GSResult.fail(GSError.CODE_INVALID, "bundle %s contains itself" % id)
+	return GSResult.success(cat)
 
 
 func _cycle(id: String, path: Dictionary) -> bool:
