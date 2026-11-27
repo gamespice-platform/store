@@ -2,6 +2,8 @@
 
 Godot 4.7+ addon for a catalogue and checkout of cosmetics, passes and bundles: prices, entitlements a dedicated server can check, and purchase intents handed to the TMC backbone. It never handles payment details. Part of the [GameSpice](https://github.com/gamespice-platform) addon family. It needs only [GameSpice Core](https://github.com/gamespice-platform/core).
 
+This is a GameSpice addon, MIT licensed and built with Claude Code. `examples/store_selftest.tscn` is an offline headless test. The games in [Zee's Games](https://zeesgames.com) are built on GameSpice addons and run on live servers, but none of them vendors the store yet.
+
 A catalogue is plain data. A player's entitlements are one small Dictionary (`owned`). Checkout turns a cart into a purchase intent: a priced, expiring, deterministic document the backbone settles. The game never sees a card number, and any request carrying one is refused.
 
 ## Install
@@ -66,9 +68,11 @@ godot --headless --path . res://examples/store_selftest.tscn
 
 The self-test is offline and exits non-zero on any failure.
 
-## Status
+## Used by
 
-Built and maintained with Claude Code. The test suites pass, but little of this has been in front of real players yet. Please report rough edges by opening an issue.
+No shipped game uses it yet; the example scene shows it.
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
 
 ## Licence
 
